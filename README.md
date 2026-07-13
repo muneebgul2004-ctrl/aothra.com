@@ -1,2 +1,2 @@
 # expense-tracker
-ai base applications
+modern ai based expense tracker
