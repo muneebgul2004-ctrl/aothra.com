@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ledger — Personal Expense Tracker</title>
+  <meta name="description" content="A premium, offline-first expense tracker. Track income, expenses, and trends — all stored locally in your browser." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="ruled-bg" aria-hidden="true"></div>
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <span class="brand-mark">
+            <i class="fa-solid fa-feather-pointer"></i>
+          </span>
+          <span class="brand-name">Ledger</span>
+        </div>
+        <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item is-active" data-view="dashboard">
+          <i class="fa-solid fa-grip"></i>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-view="transactions">
+          <i class="fa-solid fa-list-ul"></i>
+          <span>Transactions</span>
+        </button>
+        <button class="nav-item" data-view="reports">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Reports</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <i class="fa-solid fa-moon" id="themeIcon"></i>
+          <span id="themeLabel">Dark mode</span>
+        </button>
+        <p class="sidebar-hint">
+          <kbd>N</kbd> new entry &nbsp;•&nbsp; <kbd>/</kbd> search
+        </p>
+      </div>
+    </aside>
+
+    <div class="sidebar-scrim" id="sidebarScrim"></div>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="menu-btn" id="menuBtn" aria-label="Open menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+
+        <div class="topbar-title">
+          <p class="eyebrow">Statement of Account</p>
+          <h1>Good to see you back.</h1>
+        </div>
+
+        <div class="topbar-actions">
+          <button class="btn btn-ghost" id="exportCsvBtn">
+            <i class="fa-solid fa-file-arrow-down"></i>
+            <span>Export CSV</span>
+          </button>
+          <button class="btn btn-expense" id="addExpenseBtn">
+            <i class="fa-solid fa-minus"></i>
+            <span>Add Expense</span>
+          </button>
+          <button class="btn btn-income" id="addIncomeBtn">
+            <i class="fa-solid fa-plus"></i>
+            <span>Add Income</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="summary-grid" aria-label="Account summary">
+        <div class="summary-card card-balance">
+          <div class="card-top">
+            <span class="card-label">Total Balance</span>
+            <span class="card-icon"><i class="fa-solid fa-vault"></i></span>
+          </div>
+          <p class="card-figure stamp" id="totalBalance">$0.00</p>
+          <p class="card-sub" id="balanceSub">Everything you've logged so far</p>
+        </div>
+
+        <div class="summary-card card-income">
+          <div class="card-top">
+            <span class="card-label">Total Income</span>
+            <span class="card-icon"><i class="fa-solid fa-arrow-trend-up"></i></span>
+          </div>
+          <p class="card-figure" id="totalIncome">$0.00</p>
+          <p class="card-sub" id="incomeCount">0 entries</p>
+        </div>
+
+        <div class="summary-card card-expense">
+          <div class="card-top">
+            <span class="card-label">Total Expense</span>
+            <span class="card-icon"><i class="fa-solid fa-arrow-trend-down"></i></span>
+          </div>
+          <p class="card-figure" id="totalExpense">$0.00</p>
+          <p class="card-sub" id="expenseCount">0 entries</p>
+        </div>
+
+        <div class="summary-card card-count">
+          <div class="card-top">
+            <span class="card-label">Total Transactions</span>
+            <span class="card-icon"><i class="fa-solid fa-receipt"></i></span>
+          </div>
+          <p class="card-figure" id="totalTransactions">0</p>
+          <p class="card-sub" id="transactionsSub">All time</p>
+        </div>
+      </section>
+
+      <section class="charts-grid" aria-label="Charts">
+        <div class="chart-card chart-card--wide">
+          <div class="chart-card-head">
+            <h2>Monthly Trend</h2>
+            <p>Expenses over the last 6 months</p>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-head">
+            <h2>Income vs Expense</h2>
+            <p>Overall split</p>
+          </div>
+          <div class="chart-canvas-wrap chart-canvas-wrap--pie">
+            <canvas id="pieChart"></canvas>
+          </div>
+          <p class="empty-note" id="pieEmptyNote">Add a transaction to see this chart.</p>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-head">
+            <h2>Expenses by Category</h2>
+            <p>Where it's going</p>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="categoryChart"></canvas>
+          </div>
+          <p class="empty-note" id="categoryEmptyNote">No expenses logged yet.</p>
+        </div>
+      </section>
+
+      <section class="transactions-section" aria-label="Transactions">
+        <div class="section-head">
+          <div>
+            <h2>Transactions</h2>
+            <p>Every entry, ruled and reconciled.</p>
+          </div>
+        </div>
+
+        <div class="filters-bar">
+          <div class="search-field">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="Search by title…" autocomplete="off" />
+          </div>
+
+          <div class="filter-chips" id="dateChips">
+            <button class="chip is-active" data-range="all">All Time</button>
+            <button class="chip" data-range="today">Today</button>
+            <button class="chip" data-range="week">This Week</button>
+            <button class="chip" data-range="month">This Month</button>
+            <button class="chip" data-range="year">This Year</button>
+          </div>
+
+          <div class="filter-selects">
+            <select id="typeFilter" aria-label="Filter by type">
+              <option value="all">All Types</option>
+              <option value="income">Income Only</option>
+              <option value="expense">Expense Only</option>
+            </select>
+
+            <select id="categoryFilter" aria-label="Filter by category">
+              <option value="all">All Categories</option>
+            </select>
+
+            <button class="btn btn-ghost btn-sm" id="resetFiltersBtn">
+              <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="tx-table" id="txTable">
+            <thead>
+              <tr>
+                <th data-sort="date">Date <i class="fa-solid fa-sort"></i></th>
+                <th data-sort="title">Title <i class="fa-solid fa-sort"></i></th>
+                <th data-sort="category">Category <i class="fa-solid fa-sort"></i></th>
+                <th data-sort="type">Type <i class="fa-solid fa-sort"></i></th>
+                <th data-sort="amount" class="th-amount">Amount <i class="fa-solid fa-sort"></i></th>
+                <th class="th-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="txTableBody"></tbody>
+          </table>
+
+          <div class="empty-state" id="emptyState">
+            <div class="empty-illustration">
+              <i class="fa-solid fa-feather"></i>
+            </div>
+            <h3>The ledger is blank.</h3>
+            <p>Log your first income or expense to start the record.</p>
+            <button class="btn btn-income" id="emptyAddBtn">
+              <i class="fa-solid fa-plus"></i> Add your first entry
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="app-footer">
+        <p>Ledger — everything stays on this device. Nothing is sent anywhere.</p>
+      </footer>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <h2 id="modalTitle">Add Income</h2>
+        <button class="modal-close" id="modalClose" aria-label="Close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="txForm" class="tx-form" novalidate>
+        <input type="hidden" id="txId" />
+        <input type="hidden" id="txType" value="income" />
+
+        <div class="form-row">
+          <label for="txTitle">Title</label>
+          <input type="text" id="txTitle" placeholder="e.g. Freelance payment" maxlength="60" />
+          <span class="field-error" id="txTitleError"></span>
+        </div>
+
+        <div class="form-row-split">
+          <div class="form-row">
+            <label for="txAmount">Amount</label>
+            <div class="amount-input">
+              <span>$</span>
+              <input type="number" id="txAmount" placeholder="0.00" step="0.01" min="0" />
+            </div>
+            <span class="field-error" id="txAmountError"></span>
+          </div>
+
+          <div class="form-row">
+            <label for="txDate">Date</label>
+            <input type="date" id="txDate" />
+            <span class="field-error" id="txDateError"></span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label for="txCategory">Category</label>
+          <select id="txCategory"></select>
+          <span class="field-error" id="txCategoryError"></span>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" id="modalCancelBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="modalSaveBtn">Save Entry</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="confirmOverlay">
+    <div class="modal modal--small" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="modal-head">
+        <h2 id="confirmTitle">Delete this entry?</h2>
+        <button class="modal-close" id="confirmClose" aria-label="Close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <p class="confirm-text">This can't be undone. The transaction will be removed from your ledger for good.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="confirmCancelBtn">Keep it</button>
+        <button type="button" class="btn btn-expense" id="confirmDeleteBtn">
+          <i class="fa-solid fa-trash"></i> Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-mark">
+      <i class="fa-solid fa-feather-pointer"></i>
+      <p>Opening the ledger…</p>
+    </div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
