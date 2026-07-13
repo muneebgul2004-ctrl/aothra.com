@@ -1,2 +1,2 @@
-# aothra.com
+# expense-tracker
 ai base applications
